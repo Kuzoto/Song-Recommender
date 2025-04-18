@@ -1,12 +1,16 @@
 import spotdl
 import librosa
+import librosa.display
 import os
 import matplotlib.pyplot as plt
+from PIL import Image
 import numpy as np
 import pandas as pd
 import tinytag
 import argparse
 import re
+import warnings
+warnings.filterwarnings('ignore')
 
 def create_specs(args):
     mode = args.mode
@@ -26,12 +30,11 @@ def create_specs(args):
         for d in directories:
             label_directory = os.path.join(train_folder, d)
             filenames = [os.path.join(label_directory, f) for f in os.listdir(label_directory) if f.endswith(".mp3")]
-            
-            for filename in filenames:
-                track_id = int(re.search(r'fma/.*/(.+?).mp3', filename).group(1))
+            for f in filenames:
+                track_id = int(re.search(r'./train_db/fma_small\\.*\\(.+?).mp3', f).group(1))
                 track_index = list(tracks_id_array).index(track_id)
                 if (str(tracks_genre_array[track_index, 0]) != '0'):
-                    y, sr = librosa.load(filename)
+                    y, sr = librosa.load(f)
                     melspectrogram_array = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128, fmax=8000)
                     spectrogram = librosa.power_to_db(melspectrogram_array)
 
@@ -40,7 +43,7 @@ def create_specs(args):
                     fig_size[1] = float(spectrogram.shape[1]/100)
                     plt.rcParams["figure.figsize"] = fig_size
                     plt.axis("off")
-                    plt.figure(figsize=(10, 4))
+                    # plt.figure(figsize=(10, 4))
                     plt.axes([0., 0., 1., 1.0], frameon=False, xticks=[], yticks=[])
                     librosa.display.specshow(spectrogram, cmap='grey_r')
                     plt.savefig("./train_db/train_spectrograms/"+ str(counter) + "_" + str(tracks_genre_array[track_index,0]) + ".jpg", dpi=100)
@@ -59,7 +62,7 @@ def create_specs(args):
                 fig_size[1] = float(spectrogram.shape[1]/100)
                 plt.rcParams["figure.figsize"] = fig_size
                 plt.axis("off")
-                plt.figure(figsize=(10, 4))
+                # plt.figure(figsize=(10, 4))
                 plt.axes([0., 0., 1., 1.0], frameon=False, xticks=[], yticks=[])
                 librosa.display.specshow(spectrogram, cmap='grey_r')
                 plt.savefig(os.path.join("./song_db/song_spectrograms", os.path.splitext(filename)[0] + ".jpg"))
