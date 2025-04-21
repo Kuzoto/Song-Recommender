@@ -34,21 +34,24 @@ def create_specs(args):
                 track_id = int(re.search(r'./train_db/fma_small\\.*\\(.+?).mp3', f).group(1))
                 track_index = list(tracks_id_array).index(track_id)
                 if (str(tracks_genre_array[track_index, 0]) != '0'):
-                    y, sr = librosa.load(f)
-                    melspectrogram_array = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128, fmax=8000)
-                    spectrogram = librosa.power_to_db(melspectrogram_array)
+                    try:
+                        y, sr = librosa.load(f)
+                        melspectrogram_array = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128, fmax=8000)
+                        spectrogram = librosa.power_to_db(melspectrogram_array)
 
-                    fig_size = plt.rcParams["figure.figsize"]
-                    fig_size[0] = float(spectrogram.shape[0]/100)
-                    fig_size[1] = float(spectrogram.shape[1]/100)
-                    plt.rcParams["figure.figsize"] = fig_size
-                    plt.axis("off")
-                    # plt.figure(figsize=(10, 4))
-                    plt.axes([0., 0., 1., 1.0], frameon=False, xticks=[], yticks=[])
-                    librosa.display.specshow(spectrogram, cmap='grey_r')
-                    plt.savefig("./train_db/train_spectrograms/"+ str(counter) + "_" + str(tracks_genre_array[track_index,0]) + ".jpg", dpi=100)
-                    plt.close()
-                    counter = counter + 1
+                        fig_size = plt.rcParams["figure.figsize"]
+                        fig_size[0] = float(spectrogram.shape[1]/100)
+                        fig_size[1] = float(spectrogram.shape[0]/100)
+                        plt.rcParams["figure.figsize"] = fig_size
+                        plt.axis("off")
+                        # plt.figure(figsize=(10, 4))
+                        plt.axes([0., 0., 1., 1.0], frameon=False, xticks=[], yticks=[])
+                        librosa.display.specshow(spectrogram, cmap='grey_r')
+                        plt.savefig("./train_db/train_spectrograms/"+ str(counter) + "_" + str(tracks_genre_array[track_index,0]) + ".jpg", dpi=100)
+                        plt.close()
+                        counter = counter + 1
+                    except Exception as e:
+                        print(str(f) + " caused an error: " + str(e))
         return
     elif mode == "Test":
         for filename in os.listdir("./song_db"):
@@ -58,8 +61,8 @@ def create_specs(args):
                 spectrogram = librosa.power_to_db(melspectrogram_array)
 
                 fig_size = plt.rcParams["figure.figsize"]
-                fig_size[0] = float(spectrogram.shape[0]/100)
-                fig_size[1] = float(spectrogram.shape[1]/100)
+                fig_size[0] = float(spectrogram.shape[1]/100)
+                fig_size[1] = float(spectrogram.shape[0]/100)
                 plt.rcParams["figure.figsize"] = fig_size
                 plt.axis("off")
                 # plt.figure(figsize=(10, 4))
