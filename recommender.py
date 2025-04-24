@@ -213,7 +213,7 @@ def recommend(song, images, labels, rec_model):
         chosen_song = {"id": 1, "name": recommend_song, "file": "./song_db/" + recommend_song + ".mp3", "type": "Original Song"}
         list_song.append(chosen_song)
 
-        while recommendations < 5:
+        while recommendations < (int(args.recommendations)+2):
             index = torch.argmax(dist_array)
             value = dist_array[index]
             print("Song Name: " + "'" + preds_label[index] + "'" + " with value = %f" % (value))
@@ -227,6 +227,7 @@ if __name__ == "__main__":
     argparser = argparse.ArgumentParser(description="Song recommender and trainer")
     argparser.add_argument("-m", "--mode", required=True, help='set mode to Train or Recommend')
     argparser.add_argument("-s", "--song", required=False, help='Recommend similar songs to given song')
+    argparser.add_argument("-r", "--recommendations", required=False, default=3, help="set the number of recommendations to be returned")
     args = argparser.parse_args()
     if args.mode == "Recommend":
         if args.song is None:
