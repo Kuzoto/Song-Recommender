@@ -41,7 +41,17 @@ if result.returncode == 0:
         f = os.path.join("./song_db/song_spectrograms", os.path.splitext(filename)[0] + ".jpg")
         plt.savefig(f)
         plt.close()
-        counter = len(os.listdir("./song_db/song_slices"))
+        
+        #Provides a visualization of the audio signal
+        # fig, ax = plt.subplots(1, 1)
+        # ax.plot(range(len(y)), y)
+        # ax.set_title("Audio Signal")
+        # ax.set_ylabel("Amplitude")
+        # ax.set_xlabel("Time")
+        # plt.show()
+
+
+        counter = len(os.listdir("./song_db/song_slices")) - 1
         song = re.search(r'./song_db/song_spectrograms\\(.+?).jpg', f).group(1)
         img = Image.open(f)
         subsample_size = 128

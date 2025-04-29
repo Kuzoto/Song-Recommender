@@ -1,9 +1,13 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
 import numpy as np 
+import pandas as pd
 import math
 import torch.nn as nn
 import torch.nn.functional as F 
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.manifold import TSNE
 from torchsummary import summary
 # from logger import Logger
 import copy
@@ -14,6 +18,7 @@ import os
 import json
 import argparse
 import warnings
+import pathvalidate
 warnings.filterwarnings('ignore')
 
 print(torch.cuda.is_available())
@@ -47,8 +52,8 @@ class RecommendModel:
 
     def __call__(self, *args, **kwargs):
         model_val = model.to(device)
-
-        model_val.load_state_dict(torch.load('model.pt', map_location='cpu'))
+        
+        model_val.load_state_dict(torch.load('model.pt', map_location=device))
         model_val.eval()
 
         removed = list(model.children())[:-1]
@@ -63,7 +68,7 @@ class RecommendModel:
         for k, v in enumerate(np.unique(labels)):
             LIST_SONG.append(('{}'.format(k+1, v)))
         
-        print(LIST_SONG)
+        
         return LIST_SONG, images, labels, rec_model
 
 @RecommendModel
@@ -89,19 +94,12 @@ def load_data():
             
 
     images = np.array(images)
+
     return images, labels
 
 def fix_filename(filename):
     """Replaces non-alphanumeric characters in a filename with underscores."""
-    return re.sub(r'[^a-zA-Z0-9]', '_', filename)
-
-def setfile_at_directory(directory):
-    """Renames files in a directory, replacing non-alphanumeric characters with underscores."""
-    for filename in os.listdir(directory):
-        new_filename = fix_filename(filename)
-        if new_filename != filename:
-            os.rename(os.path.join(directory, filename), os.path.join(directory, new_filename))
-            print(f"Renamed '{filename}' to '{new_filename}'")
+    return re.sub(r'[^a-zA-Z0-9.\/\\, -]', '_', filename)
 
 def train():
     epochs = 16
@@ -126,8 +124,8 @@ def train():
     for epoch in range(epochs):
         train_model.train()
         for i, (images, labels) in enumerate(train_loader):
-            images = (images/255.).reshape(-1, 1, 128, 128).to(device)
-            labels = F.one_hot(labels.type(torch.LongTensor), num_classes).reshape(-1, num_classes).to(device)
+            images = (images/255.).reshape(-1, 1, 128, 128).to(device) # divide images by 255. to normalize pixel values (0-1)
+            labels = F.one_hot(labels.type(torch.LongTensor), num_classes).reshape(-1, num_classes).to(device) #zero the incorrect labels and make the correct label 1 making this a binary classification
 
             preds = train_model(images)
 
@@ -153,7 +151,7 @@ def train():
             total = 0
             for images, labels in test_loader:
                 images = (images/255.).reshape(-1, 1, 128, 128).to(device)
-                labels = F.one_hot(labels.type(torch.LongTensor), num_classes).reshape(-1, num_classes).to(device)
+                labels = F.one_hot(labels.type(torch.LongTensor), num_classes).reshape(-1, num_classes).to(device) #zero the incorrect labels and make the correct label 1 making this a binary classification
                 preds = train_model(images)
                 _, predicted = torch.max(preds.data, 1)
                 total += labels.size(0)
@@ -173,6 +171,26 @@ def recommend(song, images, labels, rec_model):
     preds_label = []
     counts = []
     dist_array = []
+
+    #Creates a visualization of results
+    # plot_images = images.reshape(-1, 128*128)
+    # plot_labels = np.array(labels).reshape(-1,)
+
+    # features = ['pixel'+str(i) for i in range(plot_images.shape[1])]
+
+    # df = pd.DataFrame(plot_images, columns=features)
+    # df['labels'] = plot_labels
+    # df['recommended'] = "No"
+
+    # np.random.seed(42)
+    # rndperm = np.random.permutation(df.shape[0])
+
+    # N = images.shape[0]
+    # df_subset = df.loc[rndperm[:N],:].copy()
+    # data_subset = df_subset[features].values
+
+    # tsne = TSNE(n_components=2, verbose=1, perplexity=10, n_iter=800)
+    # tsne_results = tsne.fit_transform(data_subset)
 
     with torch.no_grad():
         for i in range(0, len(labels)):
@@ -211,16 +229,28 @@ def recommend(song, images, labels, rec_model):
         recommendations = 2
         list_song = []
         chosen_song = {"id": 1, "name": recommend_song, "file": "./song_db/" + recommend_song + ".mp3", "type": "Original Song"}
+        #Changes label in visualization
+        # df_subset.loc[df["labels"] == recommend_song, "recommended"] = "Original"
         list_song.append(chosen_song)
 
         while recommendations < (int(args.recommendations)+2):
             index = torch.argmax(dist_array)
             value = dist_array[index]
+            #Changes label in visualization
+            # df_subset.loc[df["labels"] == preds_label[index], "recommended"] = "Yes"
             print("Song Name: " + "'" + preds_label[index] + "'" + " with value = %f" % (value))
             value = '{:.4f}'.format(value.item())
             list_song.append({"id": recommendations, "name": preds_label[index], "file": "./song_db/" + preds_label[index] + ".mp3", "type": "Recommended Song", "metric": "Similarity", "value": value})
             dist_array[index] = float('-inf')
             recommendations += 1
+        
+        #Shows the visualization of results
+        # tsne_data = np.vstack((tsne_results.T, df_subset['recommended'])).T
+
+        # tsne_df = pd.DataFrame(data=tsne_data, columns=("Dim_1", "Dim_2", "recommended"))
+        # sns.FacetGrid(tsne_df, hue="recommended").map(plt.scatter, 'Dim_1', 'Dim_2').add_legend()
+        # plt.show()
+
         return list_song
     
 if __name__ == "__main__":
